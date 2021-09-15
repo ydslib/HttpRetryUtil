@@ -1,0 +1,3 @@
+rootProject.name = "HttpRetryClient"
+include ':app'
+include ':httputil'
