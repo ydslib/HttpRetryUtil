@@ -18,9 +18,9 @@ object RetryManager {
      * okhttpclient是否是单例模式，即是否需要使用方传入okhttp，如果需要
      * 则初始化时必须传入okhttpclient对象，如果时false，则需要传入token
      */
-    var mIsSingleModel: Boolean = true
+    internal var mIsSingleModel: Boolean = true
 
-    var mRetryOnConnectionFailure: Boolean = false
+    internal var mRetryOnConnectionFailure: Boolean = false
 
 
     /**log**/
@@ -32,52 +32,71 @@ object RetryManager {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    var mInterceptors: List<Interceptor>? = arrayListOf()
+    internal var mInterceptors: List<Interceptor>? = arrayListOf()
 
     /**
      * 是否需要去重，默认是
      */
-    var isNeedDeDuplication = true
+    internal var mIsNeedDeDuplication = true
 
     /**
      * 重试次数
      */
-    var mRetryCount = 0
+    internal var mRetryCount = 0
 
     /**
      * 重试延迟
      */
-    var mRetryDelay = 0L
+    internal var mRetryDelay = 0L
+
+    @get:JvmName("retryDelay")
+    val retryDelay = mRetryDelay
+    @get:JvmName("retryCount")
+    val retryCount = mRetryCount
+    @get:JvmName("isNeedDeDuplication")
+    val isNeedDeDuplication = mIsNeedDeDuplication
+    @get:JvmName("retryOnConnectionFailure")
+    val retryOnConnectionFailure = mRetryOnConnectionFailure
+
 
     /**
      * okHttpClient为null，则务必传interceptor
      */
     fun initManager(
         okHttpClient: OkHttpClient?,
-        interceptor: List<Interceptor>? = null,
-        isSingleModel: Boolean = true
+        interceptor: List<Interceptor>? = null
     ) = apply {
+
         val builder = okHttpClient?.newBuilder()
-        builder?.addInterceptor(NetRetryInterceptor())
             ?.retryOnConnectionFailure(mRetryOnConnectionFailure)
+        okHttpClient?.interceptors?.forEach {
+            builder?.addInterceptor(it)
+        }
+        mIsSingleModel = mOkHttpClient != null
+
+        if (mIsSingleModel) {
+            mInterceptors?.forEach {
+                builder?.addInterceptor(it)
+            }
+        }
 
         mOkHttpClient = builder?.build()
-        mIsSingleModel = mOkHttpClient != null
+
         mInterceptors = interceptor
-        mIsSingleModel = isSingleModel
     }
 
     fun retryOnConnectionFailure(retryOnConnectionFailure: Boolean) = apply {
         mRetryOnConnectionFailure = retryOnConnectionFailure
     }
 
-    fun retryCount(retryCount:Int) = apply {
+    fun retryCount(retryCount: Int) = apply {
         mRetryCount = retryCount
     }
 
-    fun retryDelay(retryDelay:Long) = apply {
+    fun retryDelay(retryDelay: Long) = apply {
         mRetryDelay = retryDelay
     }
+
 
     /**Cookie*/
     private val cookiePersistor by lazy {
@@ -95,9 +114,10 @@ object RetryManager {
             .cookieJar(cookieJar)
             .retryOnConnectionFailure(mRetryOnConnectionFailure)
             .addNetworkInterceptor(logInterceptor)
-            .addInterceptor(NetRetryInterceptor())
-        mInterceptors?.forEach { inter ->
+        mInterceptors?.onEach { inter ->
             build.addInterceptor(inter)
+        } ?: kotlin.run {
+            build.addInterceptor(NetRetryInterceptor())
         }
         mIsSingleModel = false
 

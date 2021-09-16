@@ -45,6 +45,9 @@ public interface WxArticleDao {
     @Query("select md5 from request_url where md5=:md5")
     fun queryDBByMd5(md5: String): String?
 
+    @Query("select * from request_url order by requestId DESC limit 1")
+    fun queryLastItem():NetRequestBean?
+
     /**
      * 根据requestId删除数据
      */

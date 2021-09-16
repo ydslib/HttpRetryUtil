@@ -6,6 +6,8 @@ import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetRequestBean
 import com.yds.httputil.db.dao.NetWorkDatabase
 import com.yds.httputil.util.MD5Util
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -55,7 +57,7 @@ class NetRetryInterceptor : Interceptor {
 
         //不是从重试过来的
         if (requestId == -1) {
-            if(RetryManager.isNeedDeDuplication){//需要去重，则看数据库中是否存在对应的md5
+            if (RetryManager.mIsNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
                 val queryDBByMd5 = dao.queryDBByMd5(md5)
                 //数据库中没有则插
                 if (queryDBByMd5 == null) {
@@ -73,7 +75,7 @@ class NetRetryInterceptor : Interceptor {
                     )
                     dao.insertDB(bean)
                 }
-            }else{//不需要去重，直接插
+            } else {//不需要去重，直接插
                 val bean = NetRequestBean(
                     userId = userId,
                     url = "${request.url}",
@@ -90,15 +92,17 @@ class NetRetryInterceptor : Interceptor {
             }
         }
 
+        val item = dao.queryLastItem()
+        requestId = item?.requestId ?: -1
 
         val response: Response
         try {
             response = chain.proceed(builder.build())
-            if (response.code in 0..500) {
-//                dao.deleteDB(requestId = requestId)
+            Log.e("NetRetryInterceptor","${request.url}")
+            if(response.code in 0..500){
+                dao.deleteDB(requestId)
             }
-            Log.e("NetRetryInterceptor", "response:${response.toString()}")
-        } catch (e: Exception) {
+        }catch (e:Exception){
             e.printStackTrace()
             throw e
         }

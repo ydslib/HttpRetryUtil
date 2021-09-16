@@ -12,7 +12,7 @@ class CookieInterceptor : Interceptor {
         val request = chain.request()
         val builder = request.newBuilder()
 //        builder.header("Content-Type","application/json")
-        builder.addHeader("Content-Type","application/json")
+//        builder.addHeader("Content-Type","application/json")
         return chain.proceed(builder.build())
     }
 }
