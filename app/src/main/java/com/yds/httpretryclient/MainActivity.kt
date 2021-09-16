@@ -5,11 +5,11 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import com.wajahatkarim3.roomexplorer.RoomExplorer
+import com.yds.httputil.RequestManager
 import com.yds.httputil.api.MainService
 import com.yds.httputil.RetrofitClient
 import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetWorkDatabase
-import com.yds.httputil.util.UrlManager
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.lang.Exception
@@ -37,10 +37,10 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.retry).setOnClickListener {
             try {
-                val wxArticleDao = NetWorkDatabase.getInstance().wxArticleDao()
-                val queryDBByUserIdList = wxArticleDao.queryDBByUserId(0)
-                queryDBByUserIdList?.forEach {
-                    UrlManager.retryRequest(it)
+                val wxArticleDao = NetWorkDatabase.getInstance().networkDao()
+                val queryAll = wxArticleDao.queryDBAll()
+                queryAll?.forEach {
+                    RequestManager.retryRequest(it)
                 }
             }catch (e:Exception){
 
@@ -59,16 +59,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.deleteAll).setOnClickListener {
             try{
-                val wxArticleDao = NetWorkDatabase.getInstance().wxArticleDao()
-                wxArticleDao.deleteByUserId(0)
-            }catch (e:Exception){
-                e.printStackTrace()
-            }
-        }
-
-        findViewById<Button>(R.id.okbtn).setOnClickListener {
-            try {
-                RetryManager.initManager(null)
+                val wxArticleDao = NetWorkDatabase.getInstance().networkDao()
+                wxArticleDao.deleteDBAll()
             }catch (e:Exception){
                 e.printStackTrace()
             }
@@ -82,6 +74,14 @@ class MainActivity : AppCompatActivity() {
             }catch (e:Exception){
                 e.printStackTrace()
             }
+        }
+
+        findViewById<Button>(R.id.startTime).setOnClickListener {
+            RetryManager.startTask()
+        }
+
+        findViewById<Button>(R.id.closeTime).setOnClickListener {
+            RetryManager.closeTask()
         }
 
     }

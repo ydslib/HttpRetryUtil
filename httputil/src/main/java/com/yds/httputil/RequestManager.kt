@@ -1,9 +1,7 @@
-package com.yds.httputil.util
+package com.yds.httputil
 
 import android.text.TextUtils
 import android.util.Log
-import com.yds.httputil.RetrofitClient
-import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetRequestBean
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -13,8 +11,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
+object RequestManager {
 
-object UrlManager {
     fun retryRequest(netRequestBean: NetRequestBean) {
 
         GlobalScope.launch {
@@ -86,6 +84,4 @@ object UrlManager {
         }
         return jsonObject.toString()
     }
-
 }
-

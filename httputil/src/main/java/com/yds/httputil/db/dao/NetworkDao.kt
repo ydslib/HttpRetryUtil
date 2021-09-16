@@ -4,7 +4,7 @@ import androidx.room.*
 
 
 @Dao
-public interface WxArticleDao {
+public interface NetworkDao {
 
     /**
      * 插入数据库
@@ -36,12 +36,6 @@ public interface WxArticleDao {
     @Query("select params from request_url where requestId = :requestId")
     fun queryParamsByRequestId(requestId: Int): String?
 
-    /**
-     * 根据userId查询数据
-     */
-    @Query("select * from request_url where userId = :userId")
-    fun queryDBByUserId(userId: Int): List<NetRequestBean>?
-
     @Query("select md5 from request_url where md5=:md5")
     fun queryDBByMd5(md5: String): String?
 
@@ -54,8 +48,8 @@ public interface WxArticleDao {
     @Query("delete from request_url where requestId = :requestId")
     fun deleteDB(requestId: Int)
 
-    @Query("delete from request_url where userId = :userId")
-    fun deleteByUserId(userId: Int)
+    @Query("delete from request_url")
+    fun deleteDBAll()
 
     @Query("delete from request_url where md5 = :md5")
     fun deleteItemByMd5(md5: String)

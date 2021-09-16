@@ -1,27 +1,17 @@
 package com.yds.httputil
 
+import android.content.Context
 import android.util.Log
-import com.franmontiel.persistentcookiejar.PersistentCookieJar
-import com.franmontiel.persistentcookiejar.cache.SetCookieCache
-import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
+import com.yds.httputil.interceptor.CookieInterceptor
 import com.yds.httputil.interceptor.NetRetryInterceptor
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
+import com.yds.httputil.util.Utils
+import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
 
 object RetryManager {
 
     private var mOkHttpClient: OkHttpClient? = null
-
-    /**
-     * okhttpclient是否是单例模式，即是否需要使用方传入okhttp，如果需要
-     * 则初始化时必须传入okhttpclient对象，如果时false，则需要传入token
-     */
-    internal var mIsSingleModel: Boolean = true
-
-    internal var mRetryOnConnectionFailure: Boolean = false
-
 
     /**log**/
     private val logger = HttpLoggingInterceptor.Logger {
@@ -32,96 +22,81 @@ object RetryManager {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    internal var mInterceptors: List<Interceptor>? = arrayListOf()
-
     /**
      * 是否需要去重，默认是
      */
-    internal var mIsNeedDeDuplication = true
+    internal var mIsNeedDeDuplication = false
 
-    /**
-     * 重试次数
-     */
-    internal var mRetryCount = 0
-
-    /**
-     * 重试延迟
-     */
-    internal var mRetryDelay = 0L
-
-    @get:JvmName("retryDelay")
-    val retryDelay = mRetryDelay
-    @get:JvmName("retryCount")
-    val retryCount = mRetryCount
     @get:JvmName("isNeedDeDuplication")
     val isNeedDeDuplication = mIsNeedDeDuplication
-    @get:JvmName("retryOnConnectionFailure")
-    val retryOnConnectionFailure = mRetryOnConnectionFailure
+
+    @get:JvmName("isStarted")
+    val isStarted = TaskScheduledManager.mIsStarted
+
+    @get:JvmName("isCanceled")
+    val isCanceled = TaskScheduledManager.mIsCanceled
+
+    @get:JvmName("delayTime")
+    val delayTime = TaskScheduledManager.mDelayTime
+
+
+    fun initManager(context: Context) = apply {
+        Utils.init(context)
+        if (mOkHttpClient != null) {
+            return@apply
+        }
+        val build = OkHttpClient.Builder()
+            .callTimeout(30, TimeUnit.SECONDS)
+            .addNetworkInterceptor(NetRetryInterceptor())
+            .addNetworkInterceptor(logInterceptor)
+        build.addInterceptor(CookieInterceptor())
+        mOkHttpClient = build?.build()
+    }
 
 
     /**
-     * okHttpClient为null，则务必传interceptor
+     * 轮询任务间隔时间，单位毫秒
      */
-    fun initManager(
-        okHttpClient: OkHttpClient?,
-        interceptor: List<Interceptor>? = null
-    ) = apply {
-
-        val builder = okHttpClient?.newBuilder()
-            ?.retryOnConnectionFailure(mRetryOnConnectionFailure)
-        okHttpClient?.interceptors?.forEach {
-            builder?.addInterceptor(it)
-        }
-        mIsSingleModel = mOkHttpClient != null
-
-        if (mIsSingleModel) {
-            mInterceptors?.forEach {
-                builder?.addInterceptor(it)
-            }
-        }
-
-        mOkHttpClient = builder?.build()
-
-        mInterceptors = interceptor
+    fun delayTime(delayTime: Long) = apply {
+        TaskScheduledManager.delayTime(delayTime)
     }
 
-    fun retryOnConnectionFailure(retryOnConnectionFailure: Boolean) = apply {
-        mRetryOnConnectionFailure = retryOnConnectionFailure
+    /**
+     * 开启轮询任务
+     */
+    fun startTask() {
+        TaskScheduledManager.startTask()
     }
 
-    fun retryCount(retryCount: Int) = apply {
-        mRetryCount = retryCount
+    /**
+     * 关闭轮询任务
+     */
+    fun closeTask() {
+        TaskScheduledManager.closeTask()
     }
 
-    fun retryDelay(retryDelay: Long) = apply {
-        mRetryDelay = retryDelay
+    /**
+     * 比如延迟3秒调度一次任务，如果在第2秒时关闭了调度，下次开启时要不要接着上次延迟时间进行调度，
+     * 也就是下次开始时先延迟1秒调度，之后还是延迟3秒调度一次任务
+     */
+    fun isDelayFromLastStop(mIsDelayFromLastStop: Boolean) = apply {
+        TaskScheduledManager.isDelayFromLastStop(mIsDelayFromLastStop)
     }
 
-
-    /**Cookie*/
-    private val cookiePersistor by lazy {
-        SharedPrefsCookiePersistor(RetrofitClient.mContext)
+    /**
+     * 是否需要去重
+     */
+    fun isNeedDeDuplication(isNeedDeDuplication: Boolean) = apply {
+        this.mIsNeedDeDuplication = isNeedDeDuplication
     }
-    private val cookieJar by lazy { PersistentCookieJar(SetCookieCache(), cookiePersistor) }
+
 
     fun getOkHttpClient(): OkHttpClient {
-        if (mOkHttpClient != null) {
-            return mOkHttpClient!!
+        if (mOkHttpClient == null) {
+            throw Exception("please call initManager() first")
         }
-
-        val build = OkHttpClient.Builder()
-            .callTimeout(30, TimeUnit.SECONDS)
-            .cookieJar(cookieJar)
-            .retryOnConnectionFailure(mRetryOnConnectionFailure)
-            .addNetworkInterceptor(logInterceptor)
-        mInterceptors?.onEach { inter ->
-            build.addInterceptor(inter)
-        } ?: kotlin.run {
-            build.addInterceptor(NetRetryInterceptor())
-        }
-        mIsSingleModel = false
-
-        return build.build()
+        return mOkHttpClient!!
     }
+
 
 }

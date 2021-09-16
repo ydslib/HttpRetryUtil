@@ -6,17 +6,18 @@ import androidx.room.RoomDatabase;
 
 import com.yds.httputil.util.Utils;
 
-@Database(entities = {NetRequestBean.class},version = 1)
+@Database(entities = {NetRequestBean.class}, version = 1)
 public abstract class NetWorkDatabase extends RoomDatabase {
 
-    public abstract WxArticleDao wxArticleDao();
+    public abstract NetworkDao networkDao();
 
-    public static synchronized NetWorkDatabase getInstance(){
+    public static synchronized NetWorkDatabase getInstance() {
         return NetWorkDBHelper.NET_WORK_DATABASE;
     }
+
     public static final String NETWORK_DB = "net_work.db";
 
-    private static class NetWorkDBHelper{
+    private static class NetWorkDBHelper {
         private static final NetWorkDatabase NET_WORK_DATABASE = Room.databaseBuilder(
                 Utils.getApp(),
                 NetWorkDatabase.class,

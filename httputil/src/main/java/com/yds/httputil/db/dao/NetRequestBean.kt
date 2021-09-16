@@ -11,14 +11,13 @@ import kotlinx.android.parcel.Parcelize
 @Parcelize
 data class NetRequestBean(
     @PrimaryKey(autoGenerate = true) val requestId:Int?=null,
-    var userId:Long,
     var url:String,
     var method:String,
     var params:String?,
     var time:Long,
-    var appEnv:String,
     var failCount:Int,
     var md5:String?,
     var contentType: String?,
-    var timeout:Long
+    var timeout:Long,
+    var headers:String
 ): Parcelable

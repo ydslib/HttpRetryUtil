@@ -47,18 +47,25 @@
         app:layout_constraintTop_toBottomOf="@+id/login"
         android:text="删除所有"/>
 
-    <Button
-        android:id="@+id/okbtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/deleteAll"
-        android:text="使用新的OkHttpClient"/>
 
     <Button
         android:id="@+id/userInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/okbtn"
+        app:layout_constraintTop_toBottomOf="@+id/deleteAll"
         android:text="用户信息"/>
+    <Button
+        android:id="@+id/startTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/userInfo"
+        android:text="开启定时"/>
+
+    <Button
+        android:id="@+id/closeTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/startTime"
+        android:text="关闭定时"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

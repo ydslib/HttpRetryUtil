@@ -47,6 +47,9 @@ object RetrofitClient {
 
     }
 
+    private val netRetryInterceptor by lazy {
+        NetRetryInterceptor()
+    }
 
     /**Cookie*/
     private val cookiePersistor by lazy {
@@ -68,6 +71,7 @@ object RetrofitClient {
             .callTimeout(30, TimeUnit.SECONDS)
             .cookieJar(cookieJar)
             .addNetworkInterceptor(logInterceptor)
+            .addNetworkInterceptor(netRetryInterceptor)
         mInterceptors.forEach { inter ->
             build.addInterceptor(inter)
         }
