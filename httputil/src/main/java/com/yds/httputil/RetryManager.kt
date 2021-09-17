@@ -2,7 +2,6 @@ package com.yds.httputil
 
 import android.content.Context
 import android.util.Log
-import com.yds.httputil.interceptor.CookieInterceptor
 import com.yds.httputil.interceptor.NetRetryInterceptor
 import com.yds.httputil.util.Utils
 import okhttp3.*
@@ -47,9 +46,8 @@ object RetryManager {
         }
         val build = OkHttpClient.Builder()
             .callTimeout(30, TimeUnit.SECONDS)
-            .addNetworkInterceptor(NetRetryInterceptor())
             .addNetworkInterceptor(logInterceptor)
-        build.addInterceptor(CookieInterceptor())
+        build.addInterceptor(NetRetryInterceptor())
         mOkHttpClient = build?.build()
     }
 

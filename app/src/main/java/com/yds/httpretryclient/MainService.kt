@@ -1,5 +1,6 @@
 package com.yds.httpretryclient
 
+import com.yds.httputil.RequestManager
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -9,6 +10,7 @@ interface MainService {
     suspend fun getWxArticle(): Response<WxArticle>
 
     @GET("article/list/0/json")
+    @Headers(RequestManager.STORE_HEADER)
     suspend fun getAllArticle(@Query("cid") cid: Int): Response<KnowArticle>
 
     @POST("user/login")

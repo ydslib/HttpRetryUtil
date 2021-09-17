@@ -1,4 +1,4 @@
-package com.yds.httputil.converter
+package com.yds.httpretryclient.converter
 
 import okhttp3.ResponseBody
 import retrofit2.Converter

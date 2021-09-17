@@ -12,7 +12,9 @@ import org.json.JSONObject
 import java.io.IOException
 
 object RequestManager {
-
+    const val STORE_HEADER_KEY = "store_url"
+    const val STORE_HEADER_VALUE = "store_url"
+    const val STORE_HEADER = "$STORE_HEADER_KEY:$STORE_HEADER_VALUE"
     fun retryRequest(netRequestBean: NetRequestBean) {
 
         GlobalScope.launch {

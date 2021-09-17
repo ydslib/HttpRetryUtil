@@ -6,7 +6,7 @@ import android.util.Log
 import com.franmontiel.persistentcookiejar.PersistentCookieJar
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor
-import com.yds.httputil.converter.NullConverterFactory
+import com.yds.httpretryclient.converter.NullConverterFactory
 import com.yds.httputil.interceptor.NetRetryInterceptor
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -71,7 +71,7 @@ object RetrofitClient {
             .callTimeout(30, TimeUnit.SECONDS)
             .cookieJar(cookieJar)
             .addNetworkInterceptor(logInterceptor)
-            .addNetworkInterceptor(netRetryInterceptor)
+        build.addInterceptor(netRetryInterceptor)
         mInterceptors.forEach { inter ->
             build.addInterceptor(inter)
         }

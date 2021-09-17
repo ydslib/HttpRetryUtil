@@ -2,6 +2,7 @@ package com.yds.httputil.interceptor
 
 import android.text.TextUtils
 import android.util.Log
+import com.yds.httputil.RequestManager
 import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetRequestBean
 import com.yds.httputil.db.dao.NetRequestFailCount
@@ -24,7 +25,7 @@ class NetRetryInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-
+        request.header(RequestManager.STORE_HEADER_KEY) ?: return chain.proceed(request)
         val builder = request.newBuilder()
         var requestId = request.header("requestId")?.toInt() ?: -1
         //由host+params+header
