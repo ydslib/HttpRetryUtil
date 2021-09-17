@@ -2,7 +2,6 @@ package com.yds.httputil.interceptor
 
 import android.text.TextUtils
 import android.util.Log
-import com.yds.httputil.RequestManager
 import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetRequestBean
 import com.yds.httputil.db.dao.NetRequestFailCount
@@ -25,7 +24,7 @@ class NetRetryInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        request.header(RequestManager.STORE_HEADER_KEY) ?: return chain.proceed(request)
+        request.header("store_url") ?: return chain.proceed(request)
         val builder = request.newBuilder()
         var requestId = request.header("requestId")?.toInt() ?: -1
         //由host+params+header
@@ -59,20 +58,24 @@ class NetRetryInterceptor : Interceptor {
             if (response.code in 0..500) {
                 dao.deleteDB(requestId)
             } else {
-                updateFailCount(dao, requestId)
+                updateFailCountOrDelete(dao, requestId)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            updateFailCount(dao, requestId)
+            updateFailCountOrDelete(dao, requestId)
             throw e
         }
 
         return response
     }
 
-    private fun updateFailCount(dao: NetworkDao, requestId: Int) {
+    private fun updateFailCountOrDelete(dao: NetworkDao, requestId: Int) {
         val failCount = dao.queryFailCount(requestId)
-        dao.update(NetRequestFailCount(requestId, failCount + 1))
+        if (failCount + 1 >= RetryManager.maxFailCount) {
+            dao.deleteDB(requestId)
+        }else{
+            dao.update(NetRequestFailCount(requestId, failCount + 1))
+        }
     }
 
     private fun bodyHasUnknownEncoding(headers: Headers): Boolean {
@@ -140,7 +143,7 @@ class NetRetryInterceptor : Interceptor {
         headerJson: String,
         dao: NetworkDao
     ) {
-        if (RetryManager.mIsNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
+        if (RetryManager.isNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
             val queryDBByMd5 = dao.queryDBByMd5(md5)
             //数据库中没有则插
             if (queryDBByMd5 == null) {

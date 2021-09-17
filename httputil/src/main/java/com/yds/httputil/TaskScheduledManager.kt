@@ -41,7 +41,7 @@ object TaskScheduledManager {
             return
         }
         var initialDelay = 0L
-        if(mIsDelayFromLastStop){
+        if (mIsDelayFromLastStop) {
             val time = stopTime - startTime
             if (time > 0) {
                 initialDelay = mDelayTime - time % mDelayTime
@@ -56,14 +56,19 @@ object TaskScheduledManager {
         mIsCanceled = mFuture == null
     }
 
-    private fun scheduleTask(){
+    private fun scheduleTask() {
         try {
             val wxArticleDao = NetWorkDatabase.getInstance().networkDao()
             val queryDBAllList = wxArticleDao.queryDBAll()
-            queryDBAllList?.forEach {
+
+            val requestList = queryDBAllList?.filter {
+                System.currentTimeMillis() - it.time > it.timeout
+            }
+
+            requestList?.forEach {
                 RequestManager.retryRequest(it)
             }
-        }catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
         }
     }

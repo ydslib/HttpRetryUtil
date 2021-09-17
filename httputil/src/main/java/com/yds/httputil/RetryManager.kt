@@ -24,7 +24,8 @@ object RetryManager {
     /**
      * 是否需要去重，默认是
      */
-    internal var mIsNeedDeDuplication = false
+    private var mIsNeedDeDuplication = false
+    private var mMaxFailCount = Integer.MAX_VALUE
 
     @get:JvmName("isNeedDeDuplication")
     val isNeedDeDuplication = mIsNeedDeDuplication
@@ -37,6 +38,9 @@ object RetryManager {
 
     @get:JvmName("delayTime")
     val delayTime = TaskScheduledManager.mDelayTime
+
+    @get:JvmName("maxFailCount")
+    val maxFailCount = mMaxFailCount
 
 
     fun initManager(context: Context) = apply {
@@ -57,6 +61,10 @@ object RetryManager {
      */
     fun delayTime(delayTime: Long) = apply {
         TaskScheduledManager.delayTime(delayTime)
+    }
+
+    fun maxFailCount(maxFailCount:Int) = apply {
+        this.mMaxFailCount = maxFailCount
     }
 
     /**
