@@ -1,4 +1,4 @@
-package com.yds.httputil.api
+package com.yds.httpretryclient
 
 import retrofit2.Response
 import retrofit2.http.*

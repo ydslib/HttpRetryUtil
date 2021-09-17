@@ -21,3 +21,9 @@ data class NetRequestBean(
     var timeout:Long,
     var headers:String
 ): Parcelable
+
+@Parcelize
+data class NetRequestFailCount(
+    val requestId:Int,
+    var failCount:Int
+): Parcelable

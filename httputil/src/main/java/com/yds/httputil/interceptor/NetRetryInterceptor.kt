@@ -4,6 +4,7 @@ import android.text.TextUtils
 import android.util.Log
 import com.yds.httputil.RetryManager
 import com.yds.httputil.db.dao.NetRequestBean
+import com.yds.httputil.db.dao.NetRequestFailCount
 import com.yds.httputil.db.dao.NetWorkDatabase
 import com.yds.httputil.db.dao.NetworkDao
 import com.yds.httputil.util.MD5Util
@@ -29,20 +30,25 @@ class NetRetryInterceptor : Interceptor {
         //由host+params+header
 
         val dao = NetWorkDatabase.getInstance().networkDao()
-        //获取请求头字符串
-        val headerJson = getHeaderStr(request)
-        //获取请求参数
-        val params = getRequestParams(request)
-        //生成md5
-        val md5 = MD5Util.md5ForString("${request.url}?${params}&header=${headerJson}")
 
-        //插入到数据库
-        insertToDB(request, md5, params, headerJson, dao)
 
-        //获取当前插入数据到requestId
+        //如果不是从数据库中取出来的
         if (requestId == -1) {
+            //获取请求头字符串
+            val headerJson = getHeaderStr(request)
+            //获取请求参数
+            val params = getRequestParams(request)
+            //生成md5
+            val md5 = MD5Util.md5ForString("${request.url}?${params}&header=${headerJson}")
+
+            //插入到数据库
+            insertToDB(request, md5, params, headerJson, dao)
+
             val item = dao.queryLastItem()
             requestId = item?.requestId ?: -1
+        } else {
+            //如果是从数据库中取出的，需要添加头部
+            addHeaderStr(builder, dao, requestId)
         }
 
         val response: Response
@@ -51,16 +57,22 @@ class NetRetryInterceptor : Interceptor {
             Log.e("NetRetryInterceptor", "${request.url}")
             if (response.code in 0..500) {
                 dao.deleteDB(requestId)
+            } else {
+                updateFailCount(dao, requestId)
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            updateFailCount(dao, requestId)
             throw e
         }
 
         return response
     }
 
-
+    private fun updateFailCount(dao: NetworkDao, requestId: Int) {
+        val failCount = dao.queryFailCount(requestId)
+        dao.update(NetRequestFailCount(requestId, failCount + 1))
+    }
 
     private fun bodyHasUnknownEncoding(headers: Headers): Boolean {
         val contentEncoding = headers["Content-Encoding"]
@@ -68,6 +80,19 @@ class NetRetryInterceptor : Interceptor {
             "identity",
             ignoreCase = true
         ) && !contentEncoding.equals("gzip", ignoreCase = true)
+    }
+
+    private fun addHeaderStr(builder: Request.Builder, dao: NetworkDao, requestId: Int) {
+        val item = dao.queryDBByRequestId(requestId)
+        val header = item?.headers
+        header?.run {
+            val jsonObject = JSONObject(header)
+            val iterator = jsonObject.keys()
+            while (iterator.hasNext()) {
+                val key = iterator.next().toString()
+                builder.addHeader(key, jsonObject[key].toString())
+            }
+        }
     }
 
     //获取header信息
@@ -114,33 +139,16 @@ class NetRetryInterceptor : Interceptor {
         headerJson: String,
         dao: NetworkDao
     ) {
-        var requestId = request.header("requestId")?.toInt() ?: -1
-        //不是从重试过来的
-        if (requestId == -1) {
-            if (RetryManager.mIsNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
-                val queryDBByMd5 = dao.queryDBByMd5(md5)
-                //数据库中没有则插
-                if (queryDBByMd5 == null) {
-                    val bean = NetRequestBean(
-                        url = "${request.url}",
-                        method = "${request.method}",
-                        params = params,
-                        time = System.currentTimeMillis(),
-                        failCount = 1,
-                        md5 = md5,
-                        contentType = request.header("Content-Type"),
-                        timeout = RetryManager.getOkHttpClient().callTimeoutMillis.toLong(),
-                        headers = headerJson.toString()
-                    )
-                    dao.insertDB(bean)
-                }
-            } else {//不需要去重，直接插
+        if (RetryManager.mIsNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
+            val queryDBByMd5 = dao.queryDBByMd5(md5)
+            //数据库中没有则插
+            if (queryDBByMd5 == null) {
                 val bean = NetRequestBean(
                     url = "${request.url}",
                     method = "${request.method}",
                     params = params,
                     time = System.currentTimeMillis(),
-                    failCount = 1,
+                    failCount = 0,
                     md5 = md5,
                     contentType = request.header("Content-Type"),
                     timeout = RetryManager.getOkHttpClient().callTimeoutMillis.toLong(),
@@ -148,6 +156,19 @@ class NetRetryInterceptor : Interceptor {
                 )
                 dao.insertDB(bean)
             }
+        } else {//不需要去重，直接插
+            val bean = NetRequestBean(
+                url = "${request.url}",
+                method = "${request.method}",
+                params = params,
+                time = System.currentTimeMillis(),
+                failCount = 0,
+                md5 = md5,
+                contentType = request.header("Content-Type"),
+                timeout = RetryManager.getOkHttpClient().callTimeoutMillis.toLong(),
+                headers = headerJson.toString()
+            )
+            dao.insertDB(bean)
         }
 
     }

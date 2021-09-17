@@ -1,4 +1,4 @@
-package com.yds.httputil.api
+package com.yds.httpretryclient
 
 data class KnowArticle(
     val data: DataX,

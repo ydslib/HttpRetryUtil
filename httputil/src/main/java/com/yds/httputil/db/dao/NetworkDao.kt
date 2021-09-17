@@ -18,6 +18,9 @@ public interface NetworkDao {
     @Query("select * from request_url")
     fun queryDBAll(): List<NetRequestBean>?
 
+    @Query("select failCount from request_url where requestId=:requestId")
+    fun queryFailCount(requestId: Int):Int
+
     /**
      * 根据requestId查询数据
      */
@@ -53,6 +56,10 @@ public interface NetworkDao {
 
     @Query("delete from request_url where md5 = :md5")
     fun deleteItemByMd5(md5: String)
+
+    @Update(entity = NetRequestBean::class)
+    fun update(failCount: NetRequestFailCount)
+
 
 
 }
