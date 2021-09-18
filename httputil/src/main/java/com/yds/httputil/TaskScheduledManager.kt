@@ -1,5 +1,6 @@
 package com.yds.httputil
 
+import android.util.Log
 import com.yds.httputil.db.dao.NetWorkDatabase
 import java.lang.Exception
 import java.util.concurrent.Executors
@@ -7,7 +8,6 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 object TaskScheduledManager {
-
     private val mExecutor = Executors.newSingleThreadScheduledExecutor()
 
     private var mFuture: ScheduledFuture<*>? = null
@@ -18,8 +18,11 @@ object TaskScheduledManager {
     internal var mDelayTime: Long = 1000L
 
     internal var mIsStarted = false
-    internal var mIsCanceled = false
+    internal var mIsCanceled = true
     private var mIsDelayFromLastStop = false
+
+    private var scheduleCount = 0
+    private var maxScheduleCount = 3
 
     /**
      * 延迟时间 单位毫秒
@@ -47,10 +50,16 @@ object TaskScheduledManager {
                 initialDelay = mDelayTime - time % mDelayTime
             }
         }
-
+        Log.e("fortest", "startTask")
         startTime = System.currentTimeMillis()
         mFuture = mExecutor.scheduleWithFixedDelay({
-            scheduleTask()
+            Log.e("fortest", "${scheduleCount}")
+            if (scheduleCount < maxScheduleCount) {
+                scheduleTask()
+                scheduleCount++
+            } else {
+                closeTask()
+            }
         }, initialDelay, mDelayTime, TimeUnit.MILLISECONDS)
         mIsStarted = mFuture != null
         mIsCanceled = mFuture == null
@@ -76,10 +85,12 @@ object TaskScheduledManager {
     }
 
     internal fun closeTask() {
+        Log.e("fortest", "closeTask")
         mFuture?.run {
             if (!isCancelled) cancel(true)
         }
         mFuture = null
+        scheduleCount = 0
         stopTime = System.currentTimeMillis()
         mIsCanceled = mFuture == null
         mIsStarted = mFuture != null

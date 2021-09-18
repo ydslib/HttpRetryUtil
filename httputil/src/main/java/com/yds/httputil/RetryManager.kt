@@ -10,6 +10,10 @@ import java.util.concurrent.TimeUnit
 
 object RetryManager {
 
+    const val DEFAULT_SCHEDULE_MODE = 0
+    const val FOREGROUND_SCHEDULE_MODE = 1
+    const val DATA_SCHEDULE_MODE = 2
+
     private var mOkHttpClient: OkHttpClient? = null
 
     /**log**/
@@ -29,6 +33,11 @@ object RetryManager {
     var isStarted = TaskScheduledManager.mIsStarted
     var isCanceled = TaskScheduledManager.mIsCanceled
     var delayTime = TaskScheduledManager.mDelayTime
+
+    var isAutoSchedule = false
+
+    var scheduledMode = DEFAULT_SCHEDULE_MODE
+
 
     fun initManager(context: Context) = apply {
         Utils.init(context)
@@ -51,7 +60,7 @@ object RetryManager {
         TaskScheduledManager.delayTime(delayTime)
     }
 
-    fun maxFailCount(maxFailCount:Int) = apply {
+    fun maxFailCount(maxFailCount: Int) = apply {
         this.maxFailCount = maxFailCount
     }
 
@@ -85,6 +94,12 @@ object RetryManager {
         this.isNeedDeDuplication = isNeedDeDuplication
     }
 
+    fun isAutoSchedule(isAutoSchedule: Boolean, scheduledMode: Int = DEFAULT_SCHEDULE_MODE) =
+        apply {
+            this.isAutoSchedule = isAutoSchedule
+            this.scheduledMode = scheduledMode
+        }
+
 
     fun getOkHttpClient(): OkHttpClient {
         if (mOkHttpClient == null) {
@@ -92,6 +107,7 @@ object RetryManager {
         }
         return mOkHttpClient!!
     }
+
 
 
 }

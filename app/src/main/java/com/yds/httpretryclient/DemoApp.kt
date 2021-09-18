@@ -11,9 +11,9 @@ class DemoApp : Application() {
         RetrofitClient.setup(this, "https://wanandroid.com", arrayListOf())
 
         RetryManager.initManager(this)
-            .isDelayFromLastStop(true)
-            .isNeedDeDuplication(true)
-            .delayTime(2 * 1000)
+            .delayTime(1000)
+            .isNeedDeDuplication(true)//是否需要去重
+            .isAutoSchedule(true)
 
 
     }

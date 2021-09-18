@@ -18,6 +18,12 @@ public interface NetworkDao {
     @Query("select * from request_url")
     fun queryDBAll(): List<NetRequestBean>?
 
+    /**
+     * 查询有多少条数据
+     */
+    @Query("select count(1) from request_url")
+    fun queryTableSize():Int
+
     @Query("select failCount from request_url where requestId=:requestId")
     fun queryFailCount(requestId: Int):Int
 
@@ -59,7 +65,4 @@ public interface NetworkDao {
 
     @Update(entity = NetRequestBean::class)
     fun update(failCount: NetRequestFailCount)
-
-
-
 }
