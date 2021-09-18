@@ -24,7 +24,6 @@ class NetRetryInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        request.header("store_url") ?: return chain.proceed(request)
         val builder = request.newBuilder()
         var requestId = request.header("requestId")?.toInt() ?: -1
         //由host+params+header
@@ -34,6 +33,7 @@ class NetRetryInterceptor : Interceptor {
 
         //如果不是从数据库中取出来的
         if (requestId == -1) {
+            request.header("store_url") ?: return chain.proceed(request)
             //获取请求头字符串
             val headerJson = getHeaderStr(request)
             //获取请求参数
