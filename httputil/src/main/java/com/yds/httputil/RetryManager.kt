@@ -24,24 +24,11 @@ object RetryManager {
     /**
      * 是否需要去重，默认是
      */
-    private var mIsNeedDeDuplication = false
-    private var mMaxFailCount = Integer.MAX_VALUE
-
-    @get:JvmName("isNeedDeDuplication")
-    val isNeedDeDuplication = mIsNeedDeDuplication
-
-    @get:JvmName("isStarted")
-    val isStarted = TaskScheduledManager.mIsStarted
-
-    @get:JvmName("isCanceled")
-    val isCanceled = TaskScheduledManager.mIsCanceled
-
-    @get:JvmName("delayTime")
-    val delayTime = TaskScheduledManager.mDelayTime
-
-    @get:JvmName("maxFailCount")
-    val maxFailCount = mMaxFailCount
-
+    var isNeedDeDuplication = false
+    var maxFailCount = Integer.MAX_VALUE
+    var isStarted = TaskScheduledManager.mIsStarted
+    var isCanceled = TaskScheduledManager.mIsCanceled
+    var delayTime = TaskScheduledManager.mDelayTime
 
     fun initManager(context: Context) = apply {
         Utils.init(context)
@@ -60,11 +47,12 @@ object RetryManager {
      * 轮询任务间隔时间，单位毫秒
      */
     fun delayTime(delayTime: Long) = apply {
+        this.delayTime = delayTime
         TaskScheduledManager.delayTime(delayTime)
     }
 
     fun maxFailCount(maxFailCount:Int) = apply {
-        this.mMaxFailCount = maxFailCount
+        this.maxFailCount = maxFailCount
     }
 
     /**
@@ -86,6 +74,7 @@ object RetryManager {
      * 也就是下次开始时先延迟1秒调度，之后还是延迟3秒调度一次任务
      */
     fun isDelayFromLastStop(mIsDelayFromLastStop: Boolean) = apply {
+        this.isNeedDeDuplication = mIsDelayFromLastStop
         TaskScheduledManager.isDelayFromLastStop(mIsDelayFromLastStop)
     }
 
@@ -93,7 +82,7 @@ object RetryManager {
      * 是否需要去重
      */
     fun isNeedDeDuplication(isNeedDeDuplication: Boolean) = apply {
-        this.mIsNeedDeDuplication = isNeedDeDuplication
+        this.isNeedDeDuplication = isNeedDeDuplication
     }
 
 

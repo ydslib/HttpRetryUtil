@@ -54,6 +54,8 @@ object TaskScheduledManager {
         }, initialDelay, mDelayTime, TimeUnit.MILLISECONDS)
         mIsStarted = mFuture != null
         mIsCanceled = mFuture == null
+        RetryManager.isCanceled = mIsCanceled
+        RetryManager.isStarted = mIsStarted
     }
 
     private fun scheduleTask() {
@@ -81,5 +83,7 @@ object TaskScheduledManager {
         stopTime = System.currentTimeMillis()
         mIsCanceled = mFuture == null
         mIsStarted = mFuture != null
+        RetryManager.isCanceled = mIsCanceled
+        RetryManager.isStarted = mIsStarted
     }
 }
