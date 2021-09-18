@@ -2,11 +2,10 @@ package com.yds.httputil.interceptor
 
 import android.text.TextUtils
 import android.util.Log
+import com.yds.httputil.ResponseCodeManager
 import com.yds.httputil.RetryManager
-import com.yds.httputil.db.dao.NetRequestBean
-import com.yds.httputil.db.dao.NetRequestFailCount
-import com.yds.httputil.db.dao.NetWorkDatabase
-import com.yds.httputil.db.dao.NetworkDao
+import com.yds.httputil.db.dao.*
+import com.yds.httputil.util.ConstValue
 import com.yds.httputil.util.MD5Util
 import okhttp3.Headers
 import okhttp3.Interceptor
@@ -25,15 +24,15 @@ class NetRetryInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val builder = request.newBuilder()
-        var requestId = request.header("requestId")?.toInt() ?: -1
-        //由host+params+header
-
-        val dao = NetWorkDatabase.getInstance().networkDao()
-
-
+        var requestId = request.header(ConstValue.HEADER_REQUESTID)?.toInt() ?: -1
         //如果不是从数据库中取出来的
         if (requestId == -1) {
-            request.header("store_url") ?: return chain.proceed(request)
+            request.header(ConstValue.HEADER_STORE) ?: return chain.proceed(request)
+            var isNeedDeDuplication = false
+            //是否开启去重
+            if (RetryManager.isNeedDeDuplication) {
+                isNeedDeDuplication = request.header(ConstValue.DEDUPLICATION) != null
+            }
             //获取请求头字符串
             val headerJson = getHeaderStr(request)
             //获取请求参数
@@ -42,41 +41,29 @@ class NetRetryInterceptor : Interceptor {
             val md5 = MD5Util.md5ForString("${request.url}?${params}&header=${headerJson}")
 
             //插入到数据库
-            insertToDB(request, md5, params, headerJson, dao)
+            DatabaseManager.insertToDB(request, md5, params, headerJson, isNeedDeDuplication)
 
-            val item = dao.queryLastItem()
+            val item = DatabaseManager.queryLastItem()
             requestId = item?.requestId ?: -1
         } else {
             //如果是从数据库中取出的，需要添加头部
-            addHeaderStr(builder, dao, requestId)
+            addHeaderStr(builder, requestId)
         }
 
         val response: Response
         try {
             response = chain.proceed(builder.build())
             Log.e("NetRetryInterceptor", "${request.url}")
-            if (response.code in 0..500) {
-                dao.deleteDB(requestId)
-            } else {
-                updateFailCountOrDelete(dao, requestId)
-            }
+            ResponseCodeManager.responseResult(response, requestId)
         } catch (e: Exception) {
             e.printStackTrace()
-            updateFailCountOrDelete(dao, requestId)
+            DatabaseManager.updateFailCountOrDelete(requestId)
             throw e
         }
 
         return response
     }
 
-    private fun updateFailCountOrDelete(dao: NetworkDao, requestId: Int) {
-        val failCount = dao.queryFailCount(requestId)
-        if (failCount + 1 >= RetryManager.maxFailCount) {
-            dao.deleteDB(requestId)
-        }else{
-            dao.update(NetRequestFailCount(requestId, failCount + 1))
-        }
-    }
 
     private fun bodyHasUnknownEncoding(headers: Headers): Boolean {
         val contentEncoding = headers["Content-Encoding"]
@@ -86,8 +73,8 @@ class NetRetryInterceptor : Interceptor {
         ) && !contentEncoding.equals("gzip", ignoreCase = true)
     }
 
-    private fun addHeaderStr(builder: Request.Builder, dao: NetworkDao, requestId: Int) {
-        val item = dao.queryDBByRequestId(requestId)
+    private fun addHeaderStr(builder: Request.Builder, requestId: Int) {
+        val item = DatabaseManager.queryDBByRequestId(requestId)
         val header = item?.headers
         header?.run {
             val jsonObject = JSONObject(header)
@@ -130,63 +117,12 @@ class NetRetryInterceptor : Interceptor {
             }
         }
 
-        if (TextUtils.isEmpty(params) && request.method.equals("get", true)) {
-            params = request.url.encodedQuery
+        if (params == null) {
+            params = "${request.url.encodedQuery}"
+        } else if (!TextUtils.isEmpty(params) && !TextUtils.isEmpty(request.url.encodedQuery)) {
+            params += "&${request.url.encodedQuery}"
         }
+
         return params
-    }
-
-    private fun insertToDB(
-        request: Request,
-        md5: String,
-        params: String?,
-        headerJson: String,
-        dao: NetworkDao
-    ) {
-        if (RetryManager.isNeedDeDuplication) {//需要去重，则看数据库中是否存在对应的md5
-            val queryDBByMd5 = dao.queryDBByMd5(md5)
-            //数据库中没有则插
-            if (queryDBByMd5 == null) {
-                val bean = NetRequestBean(
-                    url = "${request.url}",
-                    method = "${request.method}",
-                    params = params,
-                    time = System.currentTimeMillis(),
-                    failCount = 0,
-                    md5 = md5,
-                    contentType = request.header("Content-Type"),
-                    timeout = RetryManager.getOkHttpClient().callTimeoutMillis.toLong(),
-                    headers = headerJson.toString()
-                )
-                dao.insertDB(bean)
-            }
-        } else {//不需要去重，直接插
-            val bean = NetRequestBean(
-                url = "${request.url}",
-                method = "${request.method}",
-                params = params,
-                time = System.currentTimeMillis(),
-                failCount = 0,
-                md5 = md5,
-                contentType = request.header("Content-Type"),
-                timeout = RetryManager.getOkHttpClient().callTimeoutMillis.toLong(),
-                headers = headerJson.toString()
-            )
-            dao.insertDB(bean)
-        }
-        //是不是自动调度模式
-        if(RetryManager.isAutoSchedule){
-            //是不是默认模式或者数据驱动模式（即数据库中大于等于多少条数据后就自动开始调度任务）
-            if(RetryManager.scheduledMode == RetryManager.DEFAULT_SCHEDULE_MODE
-                ||RetryManager.scheduledMode == RetryManager.DATA_SCHEDULE_MODE){
-                val size = dao.queryTableSize()
-                //数据库中数据是否大于等于10条，且调度器是否处于关闭状态
-                if (size >= 10 && RetryManager.isCanceled) {
-                    RetryManager.startTask()
-                }
-            }
-        }
-
-
     }
 }

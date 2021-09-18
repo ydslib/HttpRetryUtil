@@ -33,6 +33,13 @@ object RetryManager {
     var isStarted = TaskScheduledManager.mIsStarted
     var isCanceled = TaskScheduledManager.mIsCanceled
     var delayTime = TaskScheduledManager.mDelayTime
+    var maxScheduleCount = TaskScheduledManager.maxScheduleCount
+
+    /**
+     * 当自动轮询模式时，如果轮询器关闭，且数据库中数据当条数超过maxDBCountSchedule
+     * 时，则开启轮询器
+     */
+    var maxDBCountSchedule = 10
 
     var isAutoSchedule = false
 
@@ -62,6 +69,18 @@ object RetryManager {
 
     fun maxFailCount(maxFailCount: Int) = apply {
         this.maxFailCount = maxFailCount
+    }
+
+    /**
+     * 设置最大轮询次数，如果连续maxScheduleCount次轮询数据库都为空，则关闭数据库
+     */
+    fun maxScheduleCount(maxScheduleCount:Int) = apply {
+        this.maxScheduleCount = maxScheduleCount
+        TaskScheduledManager.maxScheduleCount = maxScheduleCount
+    }
+
+    fun maxDBCountSchedule(maxDBCountSchedule:Int) = apply {
+        this.maxDBCountSchedule = maxDBCountSchedule
     }
 
     /**
@@ -108,6 +127,12 @@ object RetryManager {
         return mOkHttpClient!!
     }
 
+    /**
+     * 立即上报任务
+     */
+    fun retryImmediately(){
+        TaskScheduledManager.scheduleTaskImmediately()
+    }
 
 
 }

@@ -1,6 +1,8 @@
 package com.yds.httputil
 
 import android.util.Log
+import com.yds.httputil.db.dao.DatabaseManager
+import com.yds.httputil.db.dao.NetRequestBean
 import com.yds.httputil.db.dao.NetWorkDatabase
 import java.lang.Exception
 import java.util.concurrent.Executors
@@ -8,6 +10,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 object TaskScheduledManager {
+
     private val mExecutor = Executors.newSingleThreadScheduledExecutor()
 
     private var mFuture: ScheduledFuture<*>? = null
@@ -21,8 +24,14 @@ object TaskScheduledManager {
     internal var mIsCanceled = true
     private var mIsDelayFromLastStop = false
 
-    private var scheduleCount = 0
-    private var maxScheduleCount = 3
+    internal var scheduleCount = 0
+    internal var maxScheduleCount = 3
+
+    internal var runningTaskList:ArrayList<NetRequestBean> = arrayListOf()
+
+    //TODO 正在上传的队列
+
+    //TODO 设置延迟时间，去掉阈值
 
     /**
      * 延迟时间 单位毫秒
@@ -39,6 +48,9 @@ object TaskScheduledManager {
         this.mIsDelayFromLastStop = mIsDelayFromLastStop
     }
 
+    /**
+     * 开启轮询器
+     */
     internal fun startTask() {
         if (mFuture != null) {
             return
@@ -54,12 +66,12 @@ object TaskScheduledManager {
         startTime = System.currentTimeMillis()
         mFuture = mExecutor.scheduleWithFixedDelay({
             Log.e("fortest", "${scheduleCount}")
-            if (scheduleCount < maxScheduleCount) {
-                scheduleTask()
-                scheduleCount++
-            } else {
+
+            //如果是自动轮询，且连续查询数据库为空达到最大次数，则关闭轮询器
+            if (RetryManager.isAutoSchedule && scheduleCount >= maxScheduleCount) {
                 closeTask()
             }
+            scheduleTask()
         }, initialDelay, mDelayTime, TimeUnit.MILLISECONDS)
         mIsStarted = mFuture != null
         mIsCanceled = mFuture == null
@@ -67,14 +79,38 @@ object TaskScheduledManager {
         RetryManager.isStarted = mIsStarted
     }
 
+
+    /**
+     * 立即上报
+     */
+    internal fun scheduleTaskImmediately(){
+        try {
+            val queryDBAllList = DatabaseManager.queryAllData()
+            val list = queryDBAllList?.filter { !runningTaskList.contains(it) }
+            list?.forEach {
+                RequestManager.retryRequest(it)
+            }
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
+
     private fun scheduleTask() {
         try {
-            val wxArticleDao = NetWorkDatabase.getInstance().networkDao()
-            val queryDBAllList = wxArticleDao.queryDBAll()
+            val queryDBAllList = DatabaseManager.queryAllData()
+            //数据库中数据为空
+            if (queryDBAllList.isNullOrEmpty()){
+                scheduleCount++
+                return
+            }
+
+            scheduleCount = 0
 
             val requestList = queryDBAllList?.filter {
                 System.currentTimeMillis() - it.time > it.timeout
             }
+
+            runningTaskList.addAll(requestList)
 
             requestList?.forEach {
                 RequestManager.retryRequest(it)
@@ -89,8 +125,8 @@ object TaskScheduledManager {
         mFuture?.run {
             if (!isCancelled) cancel(true)
         }
-        mFuture = null
         scheduleCount = 0
+        mFuture = null
         stopTime = System.currentTimeMillis()
         mIsCanceled = mFuture == null
         mIsStarted = mFuture != null
