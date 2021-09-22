@@ -5,11 +5,22 @@ import okhttp3.Response
 
 object ResponseCodeManager {
 
-    fun responseResult(response: Response,requestId:Int){
-        if (response.code in 0..500) {
+    internal var responseCode = intArrayOf()
+
+    /**
+     * @param requestId 数据库的主键
+     * @param isScheduleTask 是否是从轮询数据库来的请求，true表示是，false表示不是
+     */
+    fun responseResult(response: Response, requestId: Int, isScheduleTask: Boolean) {
+        if (response.code !in responseCode) {
             DatabaseManager.deleteByRequestId(requestId)
         } else {
-            DatabaseManager.updateFailCountOrDelete(requestId)
+            if(isScheduleTask){
+                DatabaseManager.updateFailCountOrDelete(requestId)
+            }
         }
     }
+
+
+
 }

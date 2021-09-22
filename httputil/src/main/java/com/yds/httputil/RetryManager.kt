@@ -4,6 +4,9 @@ import android.content.Context
 import android.util.Log
 import com.yds.httputil.interceptor.NetRetryInterceptor
 import com.yds.httputil.util.Utils
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
@@ -35,11 +38,6 @@ object RetryManager {
     var delayTime = TaskScheduledManager.mDelayTime
     var maxScheduleCount = TaskScheduledManager.maxScheduleCount
 
-    /**
-     * 当自动轮询模式时，如果轮询器关闭，且数据库中数据当条数超过maxDBCountSchedule
-     * 时，则开启轮询器
-     */
-    var maxDBCountSchedule = 10
 
     var isAutoSchedule = false
 
@@ -79,15 +77,20 @@ object RetryManager {
         TaskScheduledManager.maxScheduleCount = maxScheduleCount
     }
 
-    fun maxDBCountSchedule(maxDBCountSchedule:Int) = apply {
-        this.maxDBCountSchedule = maxDBCountSchedule
-    }
-
     /**
      * 开启轮询任务
      */
     fun startTask() {
         TaskScheduledManager.startTask()
+        isStarted = TaskScheduledManager.mIsStarted
+    }
+
+    fun startTaskWithDelay(delayTime: Long){
+        GlobalScope.launch {
+            delay(delayTime)
+            TaskScheduledManager.startTask()
+            isStarted = TaskScheduledManager.mIsStarted
+        }
     }
 
     /**
@@ -95,6 +98,7 @@ object RetryManager {
      */
     fun closeTask() {
         TaskScheduledManager.closeTask()
+        isCanceled = TaskScheduledManager.mIsCanceled
     }
 
     /**
@@ -132,6 +136,13 @@ object RetryManager {
      */
     fun retryImmediately(){
         TaskScheduledManager.scheduleTaskImmediately()
+    }
+
+    /**
+     * 后台返回哪些code码时需要存储到数据库，用于后续轮询重试
+     */
+    fun responseCodeSave(codeArray: IntArray) = apply {
+        ResponseCodeManager.responseCode = codeArray
     }
 
 

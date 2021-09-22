@@ -138,7 +138,9 @@ public final class Utils {
             if (activityAount > 0 && RetryManager.INSTANCE.isAutoSchedule()) {
                 if (RetryManager.INSTANCE.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
                         || RetryManager.INSTANCE.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
-                    RetryManager.INSTANCE.startTask();
+                    if(RetryManager.INSTANCE.isCanceled()){
+                        RetryManager.INSTANCE.startTask();
+                    }
                 }
             }
         }
@@ -155,12 +157,20 @@ public final class Utils {
 
         @Override
         public void onActivityStopped(Activity activity) {
-            activityAount--;
+            //在splashActivity页面初始化，可能不会调用onActivityStarted，但会调用onActivityStopped，避免activityAount为负值
+            if (activityAount != 0) {
+                activityAount--;
+            }
+
             if (activityAount == 0 && RetryManager.INSTANCE.isAutoSchedule()) {
                 //回到后台
-                if (RetryManager.INSTANCE.isStarted()) {
-                    RetryManager.INSTANCE.closeTask();
+                if (RetryManager.INSTANCE.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
+                        || RetryManager.INSTANCE.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
+                    if (RetryManager.INSTANCE.isStarted()) {
+                        RetryManager.INSTANCE.closeTask();
+                    }
                 }
+
             }
         }
 
@@ -173,4 +183,5 @@ public final class Utils {
         }
 
     }
+
 }

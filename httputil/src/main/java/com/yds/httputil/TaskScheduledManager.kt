@@ -1,5 +1,7 @@
 package com.yds.httputil
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.yds.httputil.db.dao.DatabaseManager
 import com.yds.httputil.db.dao.NetRequestBean
@@ -18,7 +20,7 @@ object TaskScheduledManager {
     private var stopTime: Long = 0L
     private var startTime: Long = 0L
 
-    internal var mDelayTime: Long = 1000L
+    internal var mDelayTime: Long = 5 * 60 * 1000L
 
     internal var mIsStarted = false
     internal var mIsCanceled = true
@@ -29,9 +31,6 @@ object TaskScheduledManager {
 
     internal var runningTaskList:ArrayList<NetRequestBean> = arrayListOf()
 
-    //TODO 正在上传的队列
-
-    //TODO 设置延迟时间，去掉阈值
 
     /**
      * 延迟时间 单位毫秒
@@ -73,6 +72,50 @@ object TaskScheduledManager {
             }
             scheduleTask()
         }, initialDelay, mDelayTime, TimeUnit.MILLISECONDS)
+
+        initState()
+    }
+
+
+    /**
+     * 可不用定时器，直接用handler的延迟机制，暂时不用
+     */
+    internal fun postDelayTask(delay:Long){
+        var mDelay = delay
+        if (mDelay == 0L) {
+            mDelay = 3 * 60 * 1000
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed(Runnable {
+            scheduleTask()
+        }, mDelay)
+    }
+
+    internal fun schedulePostTask(){
+        try {
+            val queryDBAllList = DatabaseManager.queryAllData()
+            //数据库中数据为空
+            if (queryDBAllList.isNullOrEmpty()){
+                return
+            }
+
+            //过滤掉未返回结果掉接口，避免正在请求的接口又被轮询器请求
+            val requestList = queryDBAllList?.filter {
+                System.currentTimeMillis() - it.time > it.timeout
+            }
+
+            runningTaskList.addAll(requestList)
+
+            requestList?.forEach {
+                RequestManager.retryRequest(it)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun initState(){
         mIsStarted = mFuture != null
         mIsCanceled = mFuture == null
         RetryManager.isCanceled = mIsCanceled
@@ -86,6 +129,7 @@ object TaskScheduledManager {
     internal fun scheduleTaskImmediately(){
         try {
             val queryDBAllList = DatabaseManager.queryAllData()
+            //避免轮询器和立即上报同时请求同一个接口
             val list = queryDBAllList?.filter { !runningTaskList.contains(it) }
             list?.forEach {
                 RequestManager.retryRequest(it)
@@ -106,6 +150,7 @@ object TaskScheduledManager {
 
             scheduleCount = 0
 
+            //过滤掉未返回结果掉接口，避免正在请求的接口又被轮询器请求
             val requestList = queryDBAllList?.filter {
                 System.currentTimeMillis() - it.time > it.timeout
             }
@@ -128,9 +173,6 @@ object TaskScheduledManager {
         scheduleCount = 0
         mFuture = null
         stopTime = System.currentTimeMillis()
-        mIsCanceled = mFuture == null
-        mIsStarted = mFuture != null
-        RetryManager.isCanceled = mIsCanceled
-        RetryManager.isStarted = mIsStarted
+        initState()
     }
 }

@@ -16,12 +16,15 @@ object RequestManager {
     fun retryRequest(netRequestBean: NetRequestBean) {
 
         GlobalScope.launch {
-            if (netRequestBean.method.equals("get", true)) {
-                getRequest(netRequestBean)
-            } else {
-                postRequest(netRequestBean)
+            try {
+                if (netRequestBean.method.equals("get", true)) {
+                    getRequest(netRequestBean)
+                } else if(netRequestBean.method.equals("post", true)) {
+                    postRequest(netRequestBean)
+                }
+            }catch (e:Exception){
+                e.printStackTrace()
             }
-
         }
     }
 
@@ -49,8 +52,8 @@ object RequestManager {
     fun postRequest(netRequestBean: NetRequestBean) {
         var requestBody: RequestBody? = null
         netRequestBean.params?.let {
-            val params = parseUrlToJson(it)
-            requestBody = params?.toRequestBody(netRequestBean.contentType?.toMediaTypeOrNull())
+            val params = parseUrlToJson(it)?:""
+            requestBody = params.toRequestBody(netRequestBean.contentType?.toMediaTypeOrNull())
         }
 
         val request = Request.Builder()

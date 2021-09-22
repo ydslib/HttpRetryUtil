@@ -50,10 +50,9 @@ object DatabaseManager {
             //是不是默认模式或者数据驱动模式（即数据库中大于等于多少条数据后就自动开始调度任务）
             if(RetryManager.scheduledMode == RetryManager.DEFAULT_SCHEDULE_MODE
                 || RetryManager.scheduledMode == RetryManager.DATA_SCHEDULE_MODE){
-                val size = dao.queryTableSize()
-                //数据库中数据是否大于等于maxDBCountSchedule条，且调度器是否处于关闭状态
-                if (size >= RetryManager.maxDBCountSchedule && RetryManager.isCanceled) {
-                    RetryManager.startTask()
+                //调度器是否处于关闭状态,延迟2分钟开启调度任务
+                if (RetryManager.isCanceled) {
+                    RetryManager.startTaskWithDelay(2 * 60 * 1000)
                 }
             }
         }

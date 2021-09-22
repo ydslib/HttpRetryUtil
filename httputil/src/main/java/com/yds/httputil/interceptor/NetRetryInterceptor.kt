@@ -25,8 +25,9 @@ class NetRetryInterceptor : Interceptor {
         val request = chain.request()
         val builder = request.newBuilder()
         var requestId = request.header(ConstValue.HEADER_REQUESTID)?.toInt() ?: -1
+        val isScheduleTask = requestId != -1
         //如果不是从数据库中取出来的
-        if (requestId == -1) {
+        if (!isScheduleTask) {
             request.header(ConstValue.HEADER_STORE) ?: return chain.proceed(request)
             var isNeedDeDuplication = false
             //是否开启去重
@@ -54,10 +55,12 @@ class NetRetryInterceptor : Interceptor {
         try {
             response = chain.proceed(builder.build())
             Log.e("NetRetryInterceptor", "${request.url}")
-            ResponseCodeManager.responseResult(response, requestId)
+            ResponseCodeManager.responseResult(response, requestId,isScheduleTask)
         } catch (e: Exception) {
             e.printStackTrace()
-            DatabaseManager.updateFailCountOrDelete(requestId)
+            if (isScheduleTask){
+                DatabaseManager.updateFailCountOrDelete(requestId)
+            }
             throw e
         }
 
@@ -125,4 +128,6 @@ class NetRetryInterceptor : Interceptor {
 
         return params
     }
+
+
 }
