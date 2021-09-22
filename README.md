@@ -5,6 +5,7 @@
 ## 3 使用
 ### 3.1 自动轮询模式
 在SplashActivity中初始化：
+```kotlin
 //在原项目RetrofitClient初始化的基础上添加NetRetryInterceptor拦截器
 RetrofitClient.setup(
             BuildConfig.HOST,
@@ -18,18 +19,27 @@ RetryManager.initManager(this)
             .isAutoSchedule(true)
             .responseCodeSave(array)
 
+```
+
 ### 3.2 手动轮询模式
 在Application中初始化
+```kotlin
+
 val array = intArrayOf(502,504)
 RetryManager.initManager(this)
             .delayTime(1000)
             .isNeedDeDuplication(true)//是否需要去重
             .responseCodeSave(array)
+            
+ ```
 在SplashActivity中调用
+```kotlin
+
 RetryManager.startTask()
 
 //在需要关闭的地方调用关闭方法
 RetryManager.closeTask()
+```
 
 ## 4 主要api
 ### Api-initManager
