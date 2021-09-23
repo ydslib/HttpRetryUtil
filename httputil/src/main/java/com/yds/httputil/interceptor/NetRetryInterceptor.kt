@@ -31,7 +31,7 @@ class NetRetryInterceptor : Interceptor {
             request.header(ConstValue.HEADER_STORE) ?: return chain.proceed(request)
             var isNeedDeDuplication = false
             //是否开启去重
-            if (RetryManager.isNeedDeDuplication) {
+            if (RetryManager.retryConfig?.isNeedDeDuplication==true) {
                 isNeedDeDuplication = request.header(ConstValue.DEDUPLICATION) != null
             }
             //获取请求头字符串

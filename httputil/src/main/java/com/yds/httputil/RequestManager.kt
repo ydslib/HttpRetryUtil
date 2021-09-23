@@ -11,7 +11,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
-object RequestManager {
+class RequestManager {
 
     fun retryRequest(netRequestBean: NetRequestBean) {
 
@@ -28,7 +28,7 @@ object RequestManager {
         }
     }
 
-    fun getRequest(netRequestBean: NetRequestBean) {
+    private fun getRequest(netRequestBean: NetRequestBean) {
 
         val request = Request.Builder()
             .url(netRequestBean.url)
@@ -49,7 +49,7 @@ object RequestManager {
         })
     }
 
-    fun postRequest(netRequestBean: NetRequestBean) {
+    private fun postRequest(netRequestBean: NetRequestBean) {
         var requestBody: RequestBody? = null
         netRequestBean.params?.let {
             val params = parseUrlToJson(it)?:""
@@ -75,7 +75,7 @@ object RequestManager {
     }
 
 
-    fun parseUrlToJson(params: String?): String? {
+    private fun parseUrlToJson(params: String?): String? {
         if (TextUtils.isEmpty(params)) {
             return null
         }

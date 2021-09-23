@@ -135,9 +135,9 @@ public final class Utils {
         public void onActivityStarted(@NonNull Activity activity) {
             //回到前台
             activityAount++;
-            if (activityAount > 0 && RetryManager.INSTANCE.isAutoSchedule()) {
-                if (RetryManager.INSTANCE.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
-                        || RetryManager.INSTANCE.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
+            if (activityAount > 0 && RetryManager.retryConfig.isAutoSchedule()) {
+                if (RetryManager.retryConfig.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
+                        || RetryManager.retryConfig.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
                     if(RetryManager.INSTANCE.isCanceled()){
                         RetryManager.INSTANCE.startTask();
                     }
@@ -162,10 +162,10 @@ public final class Utils {
                 activityAount--;
             }
 
-            if (activityAount == 0 && RetryManager.INSTANCE.isAutoSchedule()) {
+            if (activityAount == 0 && RetryManager.retryConfig.isAutoSchedule()) {
                 //回到后台
-                if (RetryManager.INSTANCE.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
-                        || RetryManager.INSTANCE.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
+                if (RetryManager.retryConfig.getScheduledMode() == RetryManager.DEFAULT_SCHEDULE_MODE
+                        || RetryManager.retryConfig.getScheduledMode() == RetryManager.FOREGROUND_SCHEDULE_MODE) {
                     if (RetryManager.INSTANCE.isStarted()) {
                         RetryManager.INSTANCE.closeTask();
                     }

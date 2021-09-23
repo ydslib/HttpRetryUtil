@@ -76,6 +76,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.startTime).setOnClickListener {
             RetryManager.startTask()
+            println("RetryManager:${RetryManager.getOkHttpClient()}")
         }
 
         findViewById<Button>(R.id.closeTime).setOnClickListener {

@@ -1,9 +1,8 @@
 package com.yds.httputil
 
-import android.content.Context
 import android.util.Log
 import com.yds.httputil.interceptor.NetRetryInterceptor
-import com.yds.httputil.util.Utils
+import com.yds.httputil.util.RetryConfig
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -16,6 +15,11 @@ object RetryManager {
     const val DEFAULT_SCHEDULE_MODE = 0
     const val FOREGROUND_SCHEDULE_MODE = 1
     const val DATA_SCHEDULE_MODE = 2
+
+
+    /**
+     * 是否需要去重，默认是
+     */
 
     private var mOkHttpClient: OkHttpClient? = null
 
@@ -31,65 +35,39 @@ object RetryManager {
     /**
      * 是否需要去重，默认是
      */
-    var isNeedDeDuplication = false
-    var maxFailCount = Integer.MAX_VALUE
-    var isStarted = TaskScheduledManager.mIsStarted
-    var isCanceled = TaskScheduledManager.mIsCanceled
-    var delayTime = TaskScheduledManager.mDelayTime
-    var maxScheduleCount = TaskScheduledManager.maxScheduleCount
+    fun isStarted() = TaskScheduledManager.mIsStarted
+    fun isCanceled() = TaskScheduledManager.mIsCanceled
+    internal lateinit var retryConfig: RetryConfig
 
 
-    var isAutoSchedule = false
-
-    var scheduledMode = DEFAULT_SCHEDULE_MODE
-
-
-    fun initManager(context: Context) = apply {
-        Utils.init(context)
-        if (mOkHttpClient != null) {
-            return@apply
-        }
-        val build = OkHttpClient.Builder()
-            .callTimeout(30, TimeUnit.SECONDS)
-            .addNetworkInterceptor(logInterceptor)
-        build.addInterceptor(NetRetryInterceptor())
-        mOkHttpClient = build?.build()
+    fun initWithConfig(retryConfig: RetryConfig) {
+        this.retryConfig = retryConfig
     }
 
+    fun maxFailCount() = retryConfig.maxFailCount
 
-    /**
-     * 轮询任务间隔时间，单位毫秒
-     */
-    fun delayTime(delayTime: Long) = apply {
-        this.delayTime = delayTime
-        TaskScheduledManager.delayTime(delayTime)
-    }
+    fun delayTime() = TaskScheduledManager.mDelayTime
 
-    fun maxFailCount(maxFailCount: Int) = apply {
-        this.maxFailCount = maxFailCount
-    }
+    fun maxScheduleCount() = TaskScheduledManager.maxScheduleCount
 
-    /**
-     * 设置最大轮询次数，如果连续maxScheduleCount次轮询数据库都为空，则关闭数据库
-     */
-    fun maxScheduleCount(maxScheduleCount:Int) = apply {
-        this.maxScheduleCount = maxScheduleCount
-        TaskScheduledManager.maxScheduleCount = maxScheduleCount
-    }
+    fun isAutoSchedule() = retryConfig.isAutoSchedule
+
+    fun scheduledMode() = retryConfig.scheduledMode
+
+    fun isNeedDeDuplication() = retryConfig.isNeedDeDuplication
+
 
     /**
      * 开启轮询任务
      */
     fun startTask() {
         TaskScheduledManager.startTask()
-        isStarted = TaskScheduledManager.mIsStarted
     }
 
-    fun startTaskWithDelay(delayTime: Long){
+    fun startTaskWithDelay(delayTime: Long) {
         GlobalScope.launch {
             delay(delayTime)
             TaskScheduledManager.startTask()
-            isStarted = TaskScheduledManager.mIsStarted
         }
     }
 
@@ -98,43 +76,27 @@ object RetryManager {
      */
     fun closeTask() {
         TaskScheduledManager.closeTask()
-        isCanceled = TaskScheduledManager.mIsCanceled
     }
-
-    /**
-     * 比如延迟3秒调度一次任务，如果在第2秒时关闭了调度，下次开启时要不要接着上次延迟时间进行调度，
-     * 也就是下次开始时先延迟1秒调度，之后还是延迟3秒调度一次任务
-     */
-    fun isDelayFromLastStop(mIsDelayFromLastStop: Boolean) = apply {
-        this.isNeedDeDuplication = mIsDelayFromLastStop
-        TaskScheduledManager.isDelayFromLastStop(mIsDelayFromLastStop)
-    }
-
-    /**
-     * 是否需要去重
-     */
-    fun isNeedDeDuplication(isNeedDeDuplication: Boolean) = apply {
-        this.isNeedDeDuplication = isNeedDeDuplication
-    }
-
-    fun isAutoSchedule(isAutoSchedule: Boolean, scheduledMode: Int = DEFAULT_SCHEDULE_MODE) =
-        apply {
-            this.isAutoSchedule = isAutoSchedule
-            this.scheduledMode = scheduledMode
-        }
 
 
     fun getOkHttpClient(): OkHttpClient {
+        mOkHttpClient = retryConfig.mOkHttpClient
+
         if (mOkHttpClient == null) {
-            throw Exception("please call initManager() first")
+            mOkHttpClient = OkHttpClient.Builder()
+                .addNetworkInterceptor(logInterceptor)
+                .addInterceptor(NetRetryInterceptor())
+                .callTimeout(30, TimeUnit.SECONDS)
+                .build()
         }
+
         return mOkHttpClient!!
     }
 
     /**
      * 立即上报任务
      */
-    fun retryImmediately(){
+    fun retryImmediately() {
         TaskScheduledManager.scheduleTaskImmediately()
     }
 

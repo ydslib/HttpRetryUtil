@@ -5,7 +5,6 @@ import android.os.Looper
 import android.util.Log
 import com.yds.httputil.db.dao.DatabaseManager
 import com.yds.httputil.db.dao.NetRequestBean
-import com.yds.httputil.db.dao.NetWorkDatabase
 import java.lang.Exception
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -28,6 +27,8 @@ object TaskScheduledManager {
 
     internal var scheduleCount = 0
     internal var maxScheduleCount = 3
+
+    private val requestManager by lazy { RequestManager() }
 
     internal var runningTaskList:ArrayList<NetRequestBean> = arrayListOf()
 
@@ -67,7 +68,7 @@ object TaskScheduledManager {
             Log.e("fortest", "${scheduleCount}")
 
             //如果是自动轮询，且连续查询数据库为空达到最大次数，则关闭轮询器
-            if (RetryManager.isAutoSchedule && scheduleCount >= maxScheduleCount) {
+            if (RetryManager.retryConfig.isAutoSchedule && scheduleCount >= maxScheduleCount) {
                 closeTask()
             }
             scheduleTask()
@@ -108,7 +109,7 @@ object TaskScheduledManager {
             runningTaskList.addAll(requestList)
 
             requestList?.forEach {
-                RequestManager.retryRequest(it)
+                requestManager.retryRequest(it)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -118,8 +119,6 @@ object TaskScheduledManager {
     private fun initState(){
         mIsStarted = mFuture != null
         mIsCanceled = mFuture == null
-        RetryManager.isCanceled = mIsCanceled
-        RetryManager.isStarted = mIsStarted
     }
 
 
@@ -132,7 +131,7 @@ object TaskScheduledManager {
             //避免轮询器和立即上报同时请求同一个接口
             val list = queryDBAllList?.filter { !runningTaskList.contains(it) }
             list?.forEach {
-                RequestManager.retryRequest(it)
+                requestManager.retryRequest(it)
             }
         }catch (e:Exception){
             e.printStackTrace()
@@ -158,7 +157,7 @@ object TaskScheduledManager {
             runningTaskList.addAll(requestList)
 
             requestList?.forEach {
-                RequestManager.retryRequest(it)
+                requestManager.retryRequest(it)
             }
         } catch (e: Exception) {
             e.printStackTrace()

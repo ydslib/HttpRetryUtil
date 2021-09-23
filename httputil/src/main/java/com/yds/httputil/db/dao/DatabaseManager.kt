@@ -46,12 +46,12 @@ object DatabaseManager {
             dao.insertDB(bean)
         }
         //是不是自动调度模式
-        if(RetryManager.isAutoSchedule){
+        if(RetryManager.retryConfig.isAutoSchedule){
             //是不是默认模式或者数据驱动模式（即数据库中大于等于多少条数据后就自动开始调度任务）
-            if(RetryManager.scheduledMode == RetryManager.DEFAULT_SCHEDULE_MODE
-                || RetryManager.scheduledMode == RetryManager.DATA_SCHEDULE_MODE){
+            if(RetryManager.retryConfig?.scheduledMode == RetryManager.DEFAULT_SCHEDULE_MODE
+                || RetryManager.retryConfig?.scheduledMode == RetryManager.DATA_SCHEDULE_MODE){
                 //调度器是否处于关闭状态,延迟2分钟开启调度任务
-                if (RetryManager.isCanceled) {
+                if (RetryManager.isCanceled()) {
                     RetryManager.startTaskWithDelay(2 * 60 * 1000)
                 }
             }
@@ -64,9 +64,9 @@ object DatabaseManager {
 
     fun updateFailCountOrDelete(requestId: Int) {
         val failCount = dao.queryFailCount(requestId)
-        if (failCount + 1 >= RetryManager.maxFailCount) {
+        if (failCount + 1 >= RetryManager.retryConfig?.maxFailCount ?: Int.MAX_VALUE) {
             dao.deleteDB(requestId)
-        }else{
+        } else {
             dao.update(NetRequestFailCount(requestId, failCount + 1))
         }
     }
